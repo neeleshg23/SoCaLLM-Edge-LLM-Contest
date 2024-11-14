@@ -22,7 +22,7 @@ def tokenize_function(examples):
     result = tokenizer(
         examples["text"],
         padding=True,
-        max_length=2048,
+        max_length=1024,
         truncation=True,  # Added truncation
         return_tensors="pt"
     )
@@ -45,35 +45,39 @@ tokenized_dataset = dataset.map(
 # Load model
 model = AutoModelForCausalLM.from_pretrained(
     "neeleshg23/jamba-1.9b-3",
-    torch_dtype=torch.bfloat16,  # Changed from float16 to bfloat16
+    torch_dtype=torch.bfloat16, 
     attn_implementation="flash_attention_2",
     use_mamba_kernels=True,
 )
 
 # Training arguments
-output_dir = "./jamba_train_model_output"
+output_dir = "./jamba_new_model_output"
 training_args = TrainingArguments(
     output_dir=output_dir,
     overwrite_output_dir=True,
-    num_train_epochs=3,
-    per_device_train_batch_size=2,
+    num_train_epochs=1,
+    per_device_train_batch_size=14,
     save_steps=5000,
     save_total_limit=2,
     logging_dir="./logs",
     logging_steps=500,
-    dataloader_num_workers=2,
-    gradient_accumulation_steps=4,\
-    fp16=False,  # Changed to False
+    dataloader_num_workers=4,
+    fp16=False,
     report_to="none",
-    learning_rate=2e-5,
+    learning_rate=1e-4,
     prediction_loss_only=True,
-    bf16=True,  # Changed to True
-    gradient_checkpointing=True,
-    max_grad_norm=1.0,
-    optim="adamw_torch_fused",  # Added explicit optimizer
-    push_to_hub=True
+    bf16=True,
+    gradient_checkpointing=False,
+    optim="adamw_torch_fused",
+    push_to_hub=True,
+    ddp_find_unused_parameters=False,
+    # Hub pushing configuration
+    hub_strategy="every_save",  # Pushes to hub at every save
+    hub_model_id="neeleshg23/jamba-1.9b-3",
+    torch_compile=True,
+    weight_decay=0,
+    max_grad_norm=None
 )
-
 # Initialize Trainer
 trainer = Trainer(
     model=model,
