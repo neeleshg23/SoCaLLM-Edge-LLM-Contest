@@ -1,0 +1,2 @@
+Model_Name,CommonsenseQA,BBH,GSM8K,HumanEval,CHID,TruthfulQA,Throughput,GPU_Memory_MB
+jamba-1.9b-8,0,0,0,0,0,0,5.26,8259.26

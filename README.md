@@ -38,4 +38,64 @@ Code Reproduction:
 - For the sake of concision, let's call this directory $MYMLCPATH
 - `cd 4_deployment`
 - `cp -r jamba $MYMLCPATH/python/model`  
-- Add the following code
+- Add the following code to `$MYMLCPATH/model/model.py`
+```python
+"jamba": Model(
+      name="jamba",
+      model=jamba_model.JambaForCausalLM,
+      config=jamba_model.JambaConfig,
+      source={
+            "huggingface-torch": jamba_loader.huggingface,
+            "huggingface-safetensor": jamba_loader.huggingface,
+      },
+      quantize={
+            "no-quant": jamba_quantization.no_quant,
+      },
+    ),
+```
+- Add the following code to `MYMLCPATH/model/model_preset.py`
+```
+    "jamba-1.9b": {
+        "_name_or_path": "neeleshg23/jamba-1.9b-6",
+        "architectures": [
+            "JambaForCausalLM"
+        ],
+        "attention_dropout": 0.0,
+        "attn_layer_offset": 4,
+        "attn_layer_period": 8,
+        "bos_token_id": 1,
+        "d_model": 1024,
+        "eos_token_id": 2,
+        "expert_layer_offset": 1,
+        "expert_layer_period": 2,
+        "hidden_act": "silu",
+        "hidden_size": 4096,
+        "initializer_range": 0.02,
+        "intermediate_size": 14336,
+        "mamba_conv_bias": "true",
+        "mamba_d_conv": 4,
+        "mamba_d_state": 16,
+        "mamba_dt_rank": 256,
+        "mamba_expand": 2,
+        "mamba_proj_bias": "false",
+        "max_position_embeddings": 2048,
+        "model_type": "jamba",
+        "num_attention_heads": 16,
+        "num_experts": 4,
+        "num_experts_per_tok": 2,
+        "num_hidden_layers": 3,
+        "num_key_value_heads": 8,
+        "num_logits_to_keep": 1,
+        "output_router_logits": "false",
+        "pad_token_id": 0,
+        "rms_norm_eps": 1e-06,
+        "router_aux_loss_coef": 0.001,
+        "sliding_window": "null",
+        "tie_word_embeddings": "true",
+        "torch_dtype": "bfloat16",
+        "transformers_version": "4.46.2",
+        "use_cache": "true",
+        "use_mamba_kernels": "true",
+        "vocab_size": 128256
+        },
+```
