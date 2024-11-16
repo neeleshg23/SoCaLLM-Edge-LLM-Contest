@@ -3,9 +3,11 @@ import math
 import dataclasses
 from typing import Any, Dict, Optional, List, Union, Tuple
 
-from tvm import te, tir  
+from tvm import te, tir
+import tvm.relax as relax
 from tvm.relax.frontend import nn
-from tvm.relax.frontend.nn import Tensor, op
+from tvm.relax import op,ShapeExpr,const
+from tvm.relax.frontend.nn import Tensor
 
 from mlc_llm import op as op_ext
 from mlc_llm.nn import PagedKVCache, RopeMode
@@ -28,6 +30,7 @@ class JambaConfig(ConfigBase):
     intermediate_size: int = 14336
     hidden_act: str = "silu"
     num_hidden_layers: int = 32
+    pad_token_id: int = 0
     
     # Attention params
     attention_dropout: float = 0.0
@@ -315,6 +318,7 @@ class JambaAttention(nn.Module):
         
         return attn_output
 
+
 class JambaMambaMixer(nn.Module):
     """
     Mamba sequence mixer using selective state spaces.
@@ -329,7 +333,7 @@ class JambaMambaMixer(nn.Module):
         self.time_step_rank = config.mamba_dt_rank
         
         # Conv1D layer
-        self.conv1d = nn.Conv1d(
+        self.conv1d = nn.Conv1D(
             in_channels=self.intermediate_size,
             out_channels=self.intermediate_size,
             kernel_size=config.mamba_d_conv,
@@ -355,11 +359,25 @@ class JambaMambaMixer(nn.Module):
             bias=True
         )
         
-        # Initialize S4D parameters
-        A = op.arange(1, self.ssm_state_size + 1)[None, :]
-        A = A.expand(self.intermediate_size, -1)
-        self.A_log = nn.Parameter(op.log(A))
-        self.D = nn.Parameter(op.ones(self.intermediate_size))
+        # # Initialize S4D parameters
+        # A = op.arange(1, self.ssm_state_size + 1)[None, :]
+        # A = A.expand(self.intermediate_size, -1)
+        # self.A_log = nn.Parameter(op.log(A))
+        # self.D = nn.Parameter(op.ones(self.intermediate_size))
+        # 创建从 1 到 self.ssm_state_size 的序列
+        A = op.arange(1, self.ssm_state_size + 1)  # 形状: [self.ssm_state_size]
+
+        # 在第 0 维添加维度，使其形状变为 [1, self.ssm_state_size]
+        A = op.expand_dims(A, axis=0)  # 形状: [1, self.ssm_state_size]
+
+        # 将张量广播到 [self.intermediate_size, self.ssm_state_size]
+        A = op.broadcast_to(A, (self.intermediate_size, self.ssm_state_size))  # 形状: [self.intermediate_size, self.ssm_state_size]
+
+        # 取对数
+        self.A_log = op.log(A)  # 结果形状: [self.intermediate_size, self.ssm_state_size]
+
+        # 初始化 D 为全 1 的张量
+        self.D = op.ones((self.intermediate_size,), dtype="float32")
         
         # Output projection
         self.out_proj = nn.Linear(
@@ -369,9 +387,9 @@ class JambaMambaMixer(nn.Module):
         )
         
         # Layer norms for stability
-        self.dt_layernorm = nn.RMSNorm(self.time_step_rank, eps=config.rms_norm_eps)
-        self.b_layernorm = nn.RMSNorm(self.ssm_state_size, eps=config.rms_norm_eps)
-        self.c_layernorm = nn.RMSNorm(self.ssm_state_size, eps=config.rms_norm_eps)
+        self.dt_layernorm = nn.RMSNorm(self.time_step_rank, axes=-1,epsilon=config.rms_norm_eps)
+        self.b_layernorm = nn.RMSNorm(self.ssm_state_size, axes=-1,epsilon=config.rms_norm_eps)
+        self.c_layernorm = nn.RMSNorm(self.ssm_state_size, axes=-1,epsilon=config.rms_norm_eps)
         
         self.act = nn.SiLU()
 
@@ -475,12 +493,14 @@ class JambaDecoderLayer(nn.Module):
         
         # Layer norms
         self.input_layernorm = nn.RMSNorm(
-            config.hidden_size, 
-            eps=config.rms_norm_eps
+            config.hidden_size,
+            axes=-1,
+            epsilon=config.rms_norm_eps
         )
         self.pre_ff_layernorm = nn.RMSNorm(
             config.hidden_size,
-            eps=config.rms_norm_eps
+            axes=-1,
+            epsilon=config.rms_norm_eps
         )
         
         # Layer properties
@@ -560,12 +580,13 @@ class JambaModel(nn.Module):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.vocab_size = config.vocab_size
+        self.pad_token_id = config.pad_token_id
         
         # Token embedding
         self.embed_tokens = nn.Embedding(
             config.vocab_size,
             config.hidden_size,
-            padding_idx=config.pad_token_id
+            # padding_idx=config.pad_token_id
         )
         
         # Create decoder layers
@@ -577,29 +598,94 @@ class JambaModel(nn.Module):
         # Final normalization
         self.final_layernorm = nn.RMSNorm(
             config.hidden_size,
-            eps=config.rms_norm_eps
+            axes=-1,
+            epsilon=config.rms_norm_eps
         )
 
+    # def _create_attention_mask(
+    #     self,
+    #     attention_mask: Optional[Tensor],
+    #     seq_length: int,
+    #     dtype: str,
+    # ) -> Optional[Tensor]:
+    #     """Create causal attention mask."""
+    #     if attention_mask is None:
+    #         return None
+    #
+    #     # Create causal mask
+    #     mask = op.triu(
+    #         op.ones((seq_length, seq_length), dtype=dtype) * -float("inf"),
+    #         k=1
+    #     )
+    #
+    #     # Combine with attention mask if provided
+    #     if attention_mask is not None:
+    #         mask = mask.masked_fill(attention_mask[:, None, None, :] == 0, -float("inf"))
+    #
+    #     return mask
     def _create_attention_mask(
-        self,
-        attention_mask: Optional[Tensor],
-        seq_length: int,
-        dtype: str,
+            self,
+            attention_mask: Optional[Tensor],
+            seq_length,
+            dtype: str,
     ) -> Optional[Tensor]:
-        """Create causal attention mask."""
+        """创建因果注意力掩码。"""
         if attention_mask is None:
             return None
-            
-        # Create causal mask
-        mask = op.triu(
-            op.ones((seq_length, seq_length), dtype=dtype) * -float("inf"),
+
+        # 定义一个大的负常数来模拟负无穷大
+        NEG_INF = -1e9  # 根据需要调整这个值
+
+        # 使用relax.const将NEG_INF转换为TVM常量
+        neg_inf_const = relax.const(NEG_INF, dtype=dtype)
+
+        # 检查seq_length的类型
+        if isinstance(seq_length, int):
+            # 如果是整数，使用relax.const转换为TVM常量
+            seq_length_expr = relax.const(seq_length, dtype="int32")
+        else:
+            # 如果已经是TVM表达式，直接使用
+            seq_length_expr = seq_length
+
+        # 创建形状，直接使用列表或元组
+        shape = [seq_length_expr, seq_length_expr]
+
+        # 使用大的负常数创建因果掩码
+        mask = relax.op.triu(
+            relax.op.full(shape, neg_inf_const, dtype=dtype),
             k=1
         )
-        
-        # Combine with attention mask if provided
+
+        # 如果提供了attention_mask，与其结合
         if attention_mask is not None:
-            mask = mask.masked_fill(attention_mask[:, None, None, :] == 0, -float("inf"))
-            
+            # 提取attention_mask的表达式
+            if isinstance(attention_mask, Tensor):
+                attention_mask_expr = attention_mask._expr  # 获取内部的relax.Expr
+            else:
+                attention_mask_expr = attention_mask  # 已经是relax.Expr，直接使用
+
+            # 扩展attention_mask的维度
+            attention_mask_expanded = relax.op.expand_dims(attention_mask_expr, axis=1)  # [batch_size, 1, seq_length]
+            attention_mask_expanded = relax.op.expand_dims(attention_mask_expanded,
+                                                           axis=1)  # [batch_size, 1, 1, seq_length]
+
+            # 创建条件张量，使用relax.op.equal
+            zero_const = relax.const(0, dtype=attention_mask.dtype)
+            condition = relax.op.equal(attention_mask_expanded, zero_const)  # [batch_size, 1, 1, seq_length]
+
+            # 扩展mask的维度以匹配condition的形状
+            mask = relax.op.expand_dims(mask, axis=0)  # [1, seq_length, seq_length]
+            mask = relax.op.expand_dims(mask, axis=0)  # [1, 1, seq_length, seq_length]
+
+            # 获取batch_size
+            batch_size = attention_mask.shape[0]
+
+            # 广播mask以匹配condition的形状
+            mask = relax.op.broadcast_to(mask, [batch_size, 1, seq_length_expr, seq_length_expr])
+
+            # 使用relax.op.where实现条件填充
+            mask = relax.op.where(condition, neg_inf_const, mask)
+
         return mask
         
     def forward(
@@ -629,7 +715,18 @@ class JambaModel(nn.Module):
         # Get embeddings
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
-            
+            if self.pad_token_id is not None:
+                # 创建布尔掩码：标记哪些位置是填充标记
+                pad_mask = op.equal(input_ids, self.pad_token_id)  # [batch_size, seq_len]
+                # 扩展维度以匹配嵌入维度
+                pad_mask = op.expand_dims(pad_mask, axis=-1)  # [batch_size, seq_len, 1]
+
+                # 转换布尔掩码为浮点型
+                pad_mask = op.astype(pad_mask, "float32")
+
+                # 将填充位置的嵌入设置为零
+                inputs_embeds = inputs_embeds * (1 - pad_mask)
+
         hidden_states = inputs_embeds
         all_router_logits = []
         
@@ -797,7 +894,7 @@ class JambaForCausalLM(nn.Module):
             },
             "prefill": {
                 "input_embed": nn.spec.Tensor([1, "seq_len", self.hidden_size], self.dtype),
-                "attention_mask": nn.spec.Tensor([1, "seq_len"], "int32", optional=True),
+                "attention_mask": nn.spec.Tensor([1, "seq_len"], "int32"),
                 "$": {
                     "param_mode": "packed",
                     "effect_mode": "none",
@@ -805,7 +902,7 @@ class JambaForCausalLM(nn.Module):
             },
             "decode": {
                 "input_embed": nn.spec.Tensor([1, 1, self.hidden_size], self.dtype),
-                "attention_mask": nn.spec.Tensor([1, 1], "int32", optional=True),
+                "attention_mask": nn.spec.Tensor([1, 1], "int32"),
                 "$": {
                     "param_mode": "packed",
                     "effect_mode": "none",
@@ -813,8 +910,8 @@ class JambaForCausalLM(nn.Module):
             },
             "batch_prefill": {
                 "input_embeds": nn.spec.Tensor(["batch_size", "seq_len", self.hidden_size], self.dtype),
-                "attention_mask": nn.spec.Tensor(["batch_size", "seq_len"], "int32", optional=True),
-                "logit_positions": nn.spec.Tensor(["batch_size"], "int32", optional=True),
+                "attention_mask": nn.spec.Tensor(["batch_size", "seq_len"], "int32"),
+                "logit_positions": nn.spec.Tensor(["batch_size"], "int32"),
                 "$": {
                     "param_mode": "packed",
                     "effect_mode": "none",
@@ -822,7 +919,7 @@ class JambaForCausalLM(nn.Module):
             },
             "batch_decode": {
                 "input_embeds": nn.spec.Tensor(["batch_size", 1, self.hidden_size], self.dtype),
-                "attention_mask": nn.spec.Tensor(["batch_size", 1], "int32", optional=True),
+                "attention_mask": nn.spec.Tensor(["batch_size", 1], "int32"),
                 "$": {
                     "param_mode": "packed",
                     "effect_mode": "none",
