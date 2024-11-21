@@ -3,7 +3,7 @@
 [![C4 Curated Dataset](https://img.shields.io/badge/🤗%20Dataset-C4%20Curated-blue.svg)](https://huggingface.co/datasets/neeleshg23/c4_curated) [![Jamba 1.9B](https://img.shields.io/badge/🤗%20Model-Jamba%201.9B-yellow.svg)](https://huggingface.co/neeleshg23/jamba-1.9b-alpaca-chinese)
 
 ### Overview
-Jamba-based LM trained from scratch using the C4 and Alpaca datasets only
+Jamba-based LM trained from scratch using the C4 and Alpaca datasets only using Llama 3.1-8B's tokenizer
 
 ## Data Preprocessing 
 - Dependencies: Nvidia NeMo Data Curator, Nvidia CUDA GPU, and ~1TB disk space
