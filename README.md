@@ -2,6 +2,9 @@
 
 [![C4 Curated Dataset](https://img.shields.io/badge/🤗%20Dataset-C4%20Curated-blue.svg)](https://huggingface.co/datasets/neeleshg23/c4_curated) [![Jamba 1.9B](https://img.shields.io/badge/🤗%20Model-Jamba%201.9B-yellow.svg)](https://huggingface.co/neeleshg23/jamba-1.9b-alpaca-chinese)
 
+### Overview
+Jamba-based LM trained from scratch using the C4 and Alpaca datasets only
+
 ## Data Preprocessing 
 - Dependencies: Nvidia NeMo Data Curator, Nvidia CUDA GPU, and ~1TB disk space
 - Given `allenai/c4`, run cleaning pipeline adapted from [RedPajama sample clean script](https://github.com/NVIDIA/NeMo-Curator/blob/main/tutorials/pretraining-data-curation/red-pajama-v2-curation-tutorial.ipynb)
@@ -26,11 +29,17 @@ Code Reproduction:
 - `torchrun --nproc-per-node $NUM_GPU 1_training.py`
 
 ## Evaluation
-
 ### Get Accuracies
 - `conda activate opencompass`
 - `pip install mamba-ssm causal-conv1d`
 - `opencompass --datasets gsm8k_gen humaneval_gen commonsenseqa_7shot_cot_gen_734a22 truthfulqa_gen FewCLUE_chid_gen bbh_gen --hf-path neeleshg23/jamba-1.9b-8 --hf-type base --model-kwargs device_map='auto' trust_remote_code=True --max-out-len 1024 --max-num-workers $NUM_GPU`
+### Get Memory and Throughput
+- `python EvaluateThroughputAndMemory.py --model_name neeleshg23/jamba-1.9b-alpaca-chinese`
+### Results
+|       | GSM8K | HumanEval | CommonsenseQA | TruthfulQA | CHID-test | BBH | Throughput | Memory |
+|-------|-------|-----------|---------------|------------|-----------|-----|------------|--------|
+| Jamba |       |           |               |            |           |     |            |        |
+
 
 ## Deployment
 - `conda activate mlc-chat-venv`
