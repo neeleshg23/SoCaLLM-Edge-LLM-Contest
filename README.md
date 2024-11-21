@@ -36,9 +36,9 @@ Code Reproduction:
 ### Get Memory and Throughput
 - `python EvaluateThroughputAndMemory.py --model_name neeleshg23/jamba-1.9b-alpaca-chinese`
 ### Results
-|       | GSM8K | HumanEval | CommonsenseQA | TruthfulQA | CHID-test | BBH | Throughput | Memory |
-|-------|-------|-----------|---------------|------------|-----------|-----|------------|--------|
-| Jamba |       |           |               |            |           |     |            |        |
+|       | GSM8K | HumanEval | CommonsenseQA | TruthfulQA | CHID-test | BBH | Throughput (Inf/s) | Memory (MB) |
+|-------|-------|-----------|---------------|------------|-----------|-----|--------------------|-------------|
+| Jamba |       |           |               |            |           |     | 5.26               | 8259.26     |
 
 
 ## Deployment
