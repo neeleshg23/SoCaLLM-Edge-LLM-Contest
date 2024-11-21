@@ -1,0 +1,110 @@
+[2024-11-20 21:54:03] INFO auto_config.py:70: Found model configuration: dist\bundle\jamba-1.9b-5\mlc-chat-config.json
+[2024-11-20 21:54:03] INFO auto_config.py:154: Found model type: jamba. Use `--model-type` to override.
+[2024-11-20 21:54:03] WARNING auto_target.py:378: --system-lib-prefix is automatically picked from the filename, jamba_q0f32_, this allows us to use the filename as the model_lib in android/iOS builds. Please avoid renaming the .tar file when uploading the prebuilt.    
+Compiling with arguments:
+  --config          JambaConfig(hidden_size=4096, intermediate_size=14336, num_attention_heads=16, num_key_value_heads=8, num_hidden_la
+yers=3, rms_norm_eps=1e-06, vocab_size=128256, hidden_activation='silu', position_embedding_base=10000, context_window_size=2048, prefi
+ll_chunk_size=2048, tensor_parallel_shards=1, max_batch_size=128, mamba_expand=2, num_experts=4, mamba_d_state=16, mamba_d_conv=4, mamba_dt_rank=256, expert_layer_period=2, expert_layer_offset=1, tie_word_embeddings=True, kwargs={})
+  --quantization    NoQuantize(name='q0f32', kind='no-quant', model_dtype='float32')
+  --model-type      jamba
+  --target          {"thread_warp_size": runtime.BoxInt(1), "host": {"kind": "llvm", "tag": "", "keys": ["arm_cpu", "cpu"], "mtriple": 
+"aarch64-linux-android"}, "texture_spatial_limit": runtime.BoxInt(16384), "max_threads_per_block": runtime.BoxInt(256), "max_function_a
+rgs": runtime.BoxInt(128), "max_num_threads": runtime.BoxInt(256), "kind": "opencl", "max_shared_memory_per_block": runtime.BoxInt(16384), "tag": "", "keys": ["opencl", "gpu"]}
+  --opt             flashinfer=0;cublas_gemm=0;faster_transformer=0;cudagraph=0;cutlass=0;ipc_allreduce_strategy=NONE
+  --system-lib-prefix "jamba_q0f32_"
+  --output          dist\libs\jamba-1.9b-5-android.tar
+  --overrides       context_window_size=None;sliding_window_size=None;prefill_chunk_size=None;attention_sink_size=None;max_batch_size=None;tensor_parallel_shards=None;pipeline_parallel_stages=None
+[2024-11-20 21:54:03] INFO compile.py:140: Creating model from: JambaConfig(hidden_size=4096, intermediate_size=14336, num_attention_he
+ads=16, num_key_value_heads=8, num_hidden_layers=3, rms_norm_eps=1e-06, vocab_size=128256, hidden_activation='silu', position_embedding
+_base=10000, context_window_size=2048, prefill_chunk_size=2048, tensor_parallel_shards=1, max_batch_size=128, mamba_expand=2, num_exper
+ts=4, mamba_d_state=16, mamba_d_conv=4, mamba_dt_rank=256, expert_layer_period=2, expert_layer_offset=1, tie_word_embeddings=True, kwargs={})
+[2024-11-20 21:54:03] INFO compile.py:158: Exporting the model to TVM Unity compiler
+[2024-11-20 21:54:03] INFO jamba_model.py:580: Defined symbolic variables: {'seq_len'}
+hidden states size b4 in_proj [1, seq_len, 4096]
+hidden states size b4 x_proj [1, seq_len, 8192]
+<bound method Scriptable.script of # from tvm.script import tir as T
+
+@T.prim_func
+def ssm_compute(var_ssm_dA: T.handle, var_ssm_dBu: T.handle, var_ssm_C: T.handle, ssm_state: T.Buffer((1, 8192, 16), "float32"), var_ssm_output_buffer: T.handle):
+    T.func_attr({"op_pattern": 5, "tir.is_scheduled": T.bool(True), "tir.noalias": T.bool(True)})
+    seq_len = T.int32()
+    ssm_dA = T.match_buffer(var_ssm_dA, (8192, 256, seq_len, 16))
+    ssm_dBu = T.match_buffer(var_ssm_dBu, (seq_len * 256, 8192))
+    ssm_C = T.match_buffer(var_ssm_C, (1, seq_len, 16))
+    ssm_output_buffer = T.match_buffer(var_ssm_output_buffer, (1, seq_len, 8192))
+    T.evaluate(0)>
+hidden states size b4 in_proj [1, seq_len, 4096]
+hidden states size b4 x_proj [1, seq_len, 8192]
+<bound method Scriptable.script of # from tvm.script import tir as T
+
+@T.prim_func
+def ssm_compute(var_ssm_dA: T.handle, var_ssm_dBu: T.handle, var_ssm_C: T.handle, ssm_state: T.Buffer((1, 8192, 16), "float32"), var_ssm_output_buffer: T.handle):
+    T.func_attr({"op_pattern": 5, "tir.is_scheduled": T.bool(True), "tir.noalias": T.bool(True)})
+    seq_len = T.int32()
+    ssm_dA = T.match_buffer(var_ssm_dA, (8192, 256, seq_len, 16))
+    ssm_dBu = T.match_buffer(var_ssm_dBu, (seq_len * 256, 8192))
+    ssm_C = T.match_buffer(var_ssm_C, (1, seq_len, 16))
+    ssm_output_buffer = T.match_buffer(var_ssm_output_buffer, (1, seq_len, 8192))
+    T.evaluate(0)>
+hidden states size b4 in_proj [1, seq_len, 4096]
+hidden states size b4 x_proj [1, seq_len, 8192]
+<bound method Scriptable.script of # from tvm.script import tir as T
+
+@T.prim_func
+def ssm_compute(var_ssm_dA: T.handle, var_ssm_dBu: T.handle, var_ssm_C: T.handle, ssm_state: T.Buffer((1, 8192, 16), "float32"), var_ssm_output_buffer: T.handle):
+    T.func_attr({"op_pattern": 5, "tir.is_scheduled": T.bool(True), "tir.noalias": T.bool(True)})
+    seq_len = T.int32()
+    ssm_dA = T.match_buffer(var_ssm_dA, (8192, 256, seq_len, 16))
+    ssm_dBu = T.match_buffer(var_ssm_dBu, (seq_len * 256, 8192))
+    ssm_C = T.match_buffer(var_ssm_C, (1, seq_len, 16))
+    ssm_output_buffer = T.match_buffer(var_ssm_output_buffer, (1, seq_len, 8192))
+    T.evaluate(0)>
+prefill complete
+[2024-11-20 21:54:03] INFO compile.py:164: Running optimizations using TVM Unity
+[2024-11-20 21:54:03] INFO compile.py:185: Registering metadata: {'model_type': 'jamba', 'quantization': 'q0f32', 'context_window_size'
+: 2048, 'sliding_window_size': -1, 'attention_sink_size': -1, 'prefill_chunk_size': 2048, 'tensor_parallel_shards': 1, 'pipeline_parallel_stages': 1, 'kv_state_kind': 'kv_cache', 'max_batch_size': 128}
+A
+B
+[2024-11-20 21:54:03] INFO pipeline.py:54: Running TVM Relax graph-level optimizations
+[2024-11-20 21:54:03] INFO pipeline.py:54: Lowering to TVM TIR kernels
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Scripts\mlc_llm.exe\__main__.py", line 7, in <module>
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\mlc_llm\__main__.py", line 33, in main
+    cli.main(sys.argv[2:])
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\mlc_llm\cli\compile.py", line 129, in main
+    compile(
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\mlc_llm\interface\compile.py", line 243, in compile
+    _compile(args, model_config)
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\mlc_llm\interface\compile.py", line 188, in _compile
+    args.build_func(
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\mlc_llm\support\auto_target.py", line 190, in build
+    ex = relax.build(
+         ^^^^^^^^^^^^
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\relax\vm_build.py", line 347, in build
+    mod = pipeline(mod)
+          ^^^^^^^^^^^^^
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\ir\transform.py", line 238, in __call__
+    return _ffi_transform_api.RunPass(self, mod)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\_ffi\_ctypes\packed_func.py", line 245, in __call__
+    raise_last_ffi_error()
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\_ffi\base.py", line 481, in raise_last_ffi_error
+    raise py_err
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\_ffi\_ctypes\packed_func.py", line 82, in cfun
+    rv = local_pyfunc(*pyargs)
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\mlc_llm\compiler_pass\pipeline.py", line 190, in _pipeline      
+    mod = seq(mod)
+          ^^^^^^^^
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\ir\transform.py", line 238, in __call__
+    return _ffi_transform_api.RunPass(self, mod)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\_ffi\_ctypes\packed_func.py", line 245, in __call__
+    raise_last_ffi_error()
+  File "C:\Users\13252\miniconda3\envs\mlc-chat-venv\Lib\site-packages\tvm\_ffi\base.py", line 481, in raise_last_ffi_error
+    raise py_err
+tvm._ffi.base.TVMError: Traceback (most recent call last):
+  File "D:\a\package\package\tvm\src\relay\analysis\graph_partitioner.cc", line 464
+InternalError: Check failed: (group_node->pattern == kCommReduce) is false:
